@@ -1,0 +1,88 @@
+version: '3.3'
+
+services:
+  qbittorrent:
+    image: ghcr.io/linuxserver/qbittorrent
+    container_name: qbittorrent
+    environment:
+      - "PUID=${PUID}"
+      - "PGID=${PGID}"
+      - "TZ=${TZ}"
+      - WEBUI_PORT=8080
+    volumes:
+      - ./data/qbittorrent/config:/config
+      - "${QBITTORRENT_DOWNLOAD_PATH}:/downloads"
+    ports:
+      - 6881:6881
+      - 6881:6881/udp
+      - 8080:8080
+    restart: unless-stopped
+  
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - "PUID=${PUID}"
+      - "PGID=${PGID}"
+      - "TZ=${TZ}"
+    volumes:
+      - ./data/sonarr/config:/config
+      - "${TV_SHOW_DIRECTORY}:/tv"
+      - "${QBITTORRENT_DOWNLOAD_PATH}:/downloads"
+    ports:
+      - 8989:8989
+    restart: always
+    depends_on:
+      - jackett
+      - qbittorrent
+
+  radarr:
+    image: ghcr.io/linuxserver/radarr
+    container_name: radarr
+    environment:
+      - "PUID=${PUID}"
+      - "PGID=${PGID}"
+      - "TZ=${TZ}"
+    volumes:
+      - ./data/radarr/config:/config
+      - "${MOVIE_DIRECTORY}:/movies"
+      - "${QBITTORRENT_DOWNLOAD_PATH}:/downloads"
+    ports:
+      - 7878:7878
+    restart: always
+    depends_on:
+      - jackett
+      - qbittorrent
+
+  jackett:
+    image: ghcr.io/linuxserver/jackett
+    container_name: jackett
+    environment:
+      - "PUID=${PUID}"
+      - "PGID=${PGID}"
+      - "TZ=${TZ}"
+      - AUTO_UPDATE=true #optional
+    volumes:
+      - ./data/jackett/config:/config
+      - ./data/jackett/data:/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 9117:9117
+    restart: always
+    depends_on:
+      - qbittorrent
+
+  jellyfin:
+    image: ghcr.io/linuxserver/jellyfin
+    container_name: jellyfin
+    environment:
+      - "PUID=${PUID}"
+      - "PGID=${PGID}"
+      - "TZ=${TZ}"
+    volumes:
+      - ./data/jellyfin/config:/config
+      - "${TV_SHOW_DIRECTORY}:/data/tvshows"
+      - "${MOVIE_DIRECTORY}:/data/movies"
+    ports:
+      - 8096:8096
+    restart: always
